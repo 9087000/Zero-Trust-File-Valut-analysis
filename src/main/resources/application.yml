@@ -1,0 +1,38 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: zerovault-analysis-service
+
+  profiles:
+    active: gcs
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zerovault
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  issuer: zerovault-auth
+  secret: "Yfu4fP4ivG0Pjd6InT9k6nc+qwyy6ejdnGnS0PpW+zhHYAxKmhxiLFnee1Z/CGcykLciWMik4oAkjl8B0zAOkw=="
+
+
+zerovault:
+  storage:
+    bucket: zerovault-dev-storage
+  file-service-url: http://localhost:8083
+
+gcp:
+  credentials:
+    path: /Users/mukulvasanthmac/Desktop/zerovault/keys/gcp-key.json
+
+razorpay:
+  key-id: rzp_test_T572WL9EMa7sSV
+  key-secret: Urws6Z0C4FXq1yerrg3joPB3

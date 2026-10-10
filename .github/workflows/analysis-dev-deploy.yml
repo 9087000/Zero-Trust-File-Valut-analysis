@@ -1,0 +1,74 @@
+name: Analysis Service Dev Deploy
+
+on:
+  pull_request:
+    branches:
+      - release/develop
+  push:
+    branches:
+      - release/develop
+
+env:
+  PROJECT_ID: zerovault-dev-500603
+  REGION: asia-south1
+  CLUSTER_NAME: zerovault-dev
+  REPOSITORY: zerovault
+  IMAGE_NAME: analysis-service
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install GKE auth plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin --quiet
+          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build --platform linux/amd64 \
+            -t asia-south1-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:${{ github.sha }} .
+
+      - name: Push Docker image
+        if: github.event_name == 'push'
+        run: |
+          docker push asia-south1-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Get GKE credentials
+        if: github.event_name == 'push'
+        run: |
+          gcloud container clusters get-credentials $CLUSTER_NAME \
+            --region $REGION \
+            --project $PROJECT_ID
+
+      - name: Deploy to GKE
+        if: github.event_name == 'push'
+        run: |
+          kubectl set image deployment/analysis-service \
+            analysis-service=asia-south1-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:${{ github.sha }}
+
+          kubectl rollout status deployment/analysis-service

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analysis-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analysis-service
+  template:
+    metadata:
+      labels:
+        app: analysis-service
+    spec:
+      containers:
+        - name: analysis-service
+          image: asia-south1-docker.pkg.dev/zerovault-dev-500603/zerovault/analysis-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8084
+
+          envFrom:
+            - secretRef:
+                name: analysis-db-secret
+            - secretRef:
+                name: analysis-app-secret
+
+          env:
+            - name: GCP_CREDENTIALS
+              value: /app/gcp-key.json
+
+          volumeMounts:
+            - name: gcp-key-volume
+              mountPath: /app/gcp-key.json
+              subPath: gcp-key.json
+              readOnly: true
+
+      volumes:
+        - name: gcp-key-volume
+          secret:
+            secretName: gcp-key
